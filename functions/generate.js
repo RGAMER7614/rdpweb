@@ -7,10 +7,10 @@ exports.handler = async (event) => {
     try {
         const { token, ngrok } = JSON.parse(event.body);
         const octokit = new Octokit({ auth: token });
-        const repo = "Session-" + Math.floor(Math.random() * 9999);
+        const repo = "Cloud-Project-" + Math.floor(Math.random() * 9999);
         const { data: user } = await octokit.users.getAuthenticated();
 
-        // ১. রিপোজিটরি তৈরি
+        // ১. নতুন রিপোজিটরি তৈরি
         await octokit.repos.createForAuthenticatedUser({ name: repo, private: false });
 
         // ২. ফিক্সড Workflow কোড (Path এরর সমাধান)
@@ -33,10 +33,10 @@ jobs:
           sleep 21600
         `).toString('base64');
 
-        // ৩. ফাইল পুশ
+        // ৩. ফাইল পুশ করা (এটি পুশ হলেই রান হবে)
         await octokit.repos.createOrUpdateFileContents({
             owner: user.login, repo: repo, path: '.github/workflows/main.yml',
-            message: '🚀 Fixed Path Error', content: code
+            message: '🚀 Fixed Auto-run', content: code
         });
 
         return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
