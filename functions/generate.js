@@ -2,19 +2,21 @@ const { Octokit } = require("@octokit/rest");
 
 exports.handler = async (event) => {
     const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
+    if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers, body: "" };
+
     try {
         const { token, ngrok } = JSON.parse(event.body);
         const octokit = new Octokit({ auth: token });
-        const repo = "RDP-RUN-" + Math.floor(Math.random() * 999);
+        const repo = "Session-Node-" + Math.floor(Math.random() * 999);
         const { data: user } = await octokit.users.getAuthenticated();
 
         // ১. রিপোজিটরি তৈরি
         await octokit.repos.createForAuthenticatedUser({ name: repo, private: false });
 
-        // ২. Workflow ফাইল
+        // ২. Workflow কোড (অটো-রান ট্রিগার সহ)
         const code = Buffer.from(`
 name: RDP
-on: [workflow_dispatch, push]
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-latest
@@ -30,10 +32,10 @@ jobs:
           sleep 21600
         `).toString('base64');
 
-        // ৩. ফাইল পুশ (এটি পুশ হওয়া মাত্রই অ্যাকশন রান হবে)
+        // ৩. ফাইল পুশ
         await octokit.repos.createOrUpdateFileContents({
             owner: user.login, repo: repo, path: '.github/workflows/main.yml',
-            message: 'start', content: code
+            message: 'init server', content: code
         });
 
         return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
