@@ -7,15 +7,15 @@ exports.handler = async (event) => {
     try {
         const { token, ngrok } = JSON.parse(event.body);
         const octokit = new Octokit({ auth: token });
-        const repo = "Session-Node-" + Math.floor(Math.random() * 999);
+        const repo = "Session-" + Math.floor(Math.random() * 9999);
         const { data: user } = await octokit.users.getAuthenticated();
 
         // ১. রিপোজিটরি তৈরি
         await octokit.repos.createForAuthenticatedUser({ name: repo, private: false });
 
-        // ২. Workflow কোড (অটো-রান ট্রিগার সহ)
+        // ২. ফিক্সড Workflow কোড (Path এরর সমাধান)
         const code = Buffer.from(`
-name: RDP
+name: RDP_GEN
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -25,17 +25,18 @@ jobs:
         run: |
           net user runneradmin FreeRDP@2026
           Set-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ng.zip
-          Expand-Archive ng.zip
-          ./ngrok/ngrok.exe authtoken ${ngrok}
-          Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
+          Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip -DestinationPath .
+          ./ngrok.exe authtoken ${ngrok}
+          Start-Process ./ngrok.exe -ArgumentList "tcp 3389"
+          Write-Host "RDP Active for 6 Hours!"
           sleep 21600
         `).toString('base64');
 
         // ৩. ফাইল পুশ
         await octokit.repos.createOrUpdateFileContents({
             owner: user.login, repo: repo, path: '.github/workflows/main.yml',
-            message: 'init server', content: code
+            message: '🚀 Fixed Path Error', content: code
         });
 
         return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
